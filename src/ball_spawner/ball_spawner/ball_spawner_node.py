@@ -29,14 +29,14 @@ class BallSpawner(Node):
 
     def spawn_ball(self):
         # Random coordinates in front of G1
-        x = random.uniform(0.6, 1.2)
-        y = random.uniform(-0.4, 0.4)
-        z = random.uniform(0.9, 1.5)
+        x = random.uniform(0.25, 0.6)
+        y = random.uniform(-0.3, 0.3)
+        z = random.uniform(0.6, 0.1)
 
 
         # Publish PoseStamped
         pose = PoseStamped()
-        pose.header.frame_id = "base_link"   # matches your G1 model
+        pose.header.frame_id = "pelvis"   # matches your G1 model
         pose.header.stamp = self.get_clock().now().to_msg()
         pose.pose.position.x = x
         pose.pose.position.y = y
@@ -52,9 +52,9 @@ class BallSpawner(Node):
         marker.header = pose.header
         marker.type = Marker.SPHERE
         marker.action = Marker.ADD
-        marker.scale.x = 0.04   # 4 cm ping-pong ball
-        marker.scale.y = 0.04
-        marker.scale.z = 0.04
+        marker.scale.x = 0.09  # 9 cm ball
+        marker.scale.y = 0.09
+        marker.scale.z = 0.09
         marker.color.r = 1.0
         marker.color.g = 0.6
         marker.color.b = 0.0
