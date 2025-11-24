@@ -1,0 +1,49 @@
+[0.035s] Invoking command in '/home/ubuntu/host/packages/robots/robots/build/robots': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/ubuntu/host/packages/robots/robots -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/ubuntu/host/packages/robots/robots/install/robots
+[0.215s] -- The C compiler identification is GNU 13.3.0
+[0.321s] -- The CXX compiler identification is GNU 13.3.0
+[0.348s] -- Detecting C compiler ABI info
+[0.608s] -- Detecting C compiler ABI info - done
+[0.630s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.630s] -- Detecting C compile features
+[0.631s] -- Detecting C compile features - done
+[0.650s] -- Detecting CXX compiler ABI info
+[0.909s] -- Detecting CXX compiler ABI info - done
+[0.934s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.934s] -- Detecting CXX compile features
+[0.934s] -- Detecting CXX compile features - done
+[0.962s] -- Found ament_cmake: 2.5.4 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[1.085s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[1.160s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[1.389s] -- Found ament_lint_auto: 0.17.3 (/opt/ros/jazzy/share/ament_lint_auto/cmake)
+[2.131s] -- Added test 'cppcheck' to perform static code analysis on C / C++ code
+[2.132s] -- Configured cppcheck include dirs: 
+[2.133s] -- Configured cppcheck exclude dirs and/or files: 
+[2.198s] -- Added test 'flake8' to check Python code syntax and style conventions
+[2.199s] -- Configured 'flake8' exclude dirs and/or files: 
+[2.321s] -- Added test 'lint_cmake' to check CMake code style
+[2.387s] -- Added test 'pep257' to check Python code against some of the docstring style conventions in PEP 257
+[2.895s] -- Added test 'uncrustify' to check C / C++ code style
+[2.896s] -- Configured uncrustify additional arguments: 
+[2.964s] -- Added test 'xmllint' to check XML markup files
+[3.005s] -- Configuring done (2.9s)
+[3.126s] -- Generating done (0.1s)
+[3.176s] -- Build files have been written to: /home/ubuntu/host/packages/robots/robots/build/robots
+[3.179s] Invoked command in '/home/ubuntu/host/packages/robots/robots/build/robots' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/ubuntu/host/packages/robots/robots -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/ubuntu/host/packages/robots/robots/install/robots
+[3.183s] Invoking command in '/home/ubuntu/host/packages/robots/robots/build/robots': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/ubuntu/host/packages/robots/robots/build/robots -- -j3 -l3
+[3.227s] Invoked command in '/home/ubuntu/host/packages/robots/robots/build/robots' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/ubuntu/host/packages/robots/robots/build/robots -- -j3 -l3
+[3.239s] Invoking command in '/home/ubuntu/host/packages/robots/robots/build/robots': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/ubuntu/host/packages/robots/robots/build/robots
+[3.245s] -- Install configuration: ""
+[3.248s] -- Execute custom install script
+[3.260s] -- Symlinking: /home/ubuntu/host/packages/robots/robots/install/robots/share/robots/launch/viewurdf.launch.py
+[3.356s] [31mCMake Error at ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:302 (message):
+[3.356s]   Could not create symlink
+[3.357s]   '/home/ubuntu/host/packages/robots/robots/install/robots/share/robots/launch/viewurdf.launch.py'
+[3.357s]   pointing to
+[3.358s]   '/home/ubuntu/host/packages/robots/robots/launch/viewurdf.launch.py'
+[3.358s] Call Stack (most recent call first):
+[3.359s]   ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:96 (_ament_cmake_symlink_install_create_symlink)
+[3.359s]   ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:314 (ament_cmake_symlink_install_directory)
+[3.360s]   cmake_install.cmake:46 (include)
+[3.361s] 
+[3.361s] [0m
+[3.361s] Invoked command in '/home/ubuntu/host/packages/robots/robots/build/robots' returned '1': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/ubuntu/host/packages/robots/robots/build/robots

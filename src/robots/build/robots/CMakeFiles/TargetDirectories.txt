@@ -1,0 +1,9 @@
+/home/ubuntu/host/packages/robots/robots/build/robots/CMakeFiles/uninstall.dir
+/home/ubuntu/host/packages/robots/robots/build/robots/CMakeFiles/robots_uninstall.dir
+/home/ubuntu/host/packages/robots/robots/build/robots/CMakeFiles/test.dir
+/home/ubuntu/host/packages/robots/robots/build/robots/CMakeFiles/edit_cache.dir
+/home/ubuntu/host/packages/robots/robots/build/robots/CMakeFiles/rebuild_cache.dir
+/home/ubuntu/host/packages/robots/robots/build/robots/CMakeFiles/list_install_components.dir
+/home/ubuntu/host/packages/robots/robots/build/robots/CMakeFiles/install.dir
+/home/ubuntu/host/packages/robots/robots/build/robots/CMakeFiles/install/local.dir
+/home/ubuntu/host/packages/robots/robots/build/robots/CMakeFiles/install/strip.dir

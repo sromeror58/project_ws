@@ -1,0 +1,11 @@
+[31mCMake Error at ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:302 (message):
+  Could not create symlink
+  '/home/ubuntu/host/packages/project_ws/install/g1_description/share/g1_description/urdf/g1_23dof.urdf'
+  pointing to
+  '/home/ubuntu/host/packages/project_ws/src/g1_description/urdf/g1_23dof.urdf'
+Call Stack (most recent call first):
+  ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:96 (_ament_cmake_symlink_install_create_symlink)
+  ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:314 (ament_cmake_symlink_install_directory)
+  cmake_install.cmake:46 (include)
+
+[0m

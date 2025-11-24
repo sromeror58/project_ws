@@ -1,0 +1,5 @@
+source;share/g1_description/local_setup.bash
+source;share/g1_description/local_setup.dsv
+source;share/g1_description/local_setup.ps1
+source;share/g1_description/local_setup.sh
+source;share/g1_description/local_setup.zsh

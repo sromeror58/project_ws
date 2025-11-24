@@ -1,0 +1,41 @@
+[0.041s] Invoking command in '/home/ubuntu/host/packages/project_ws/build/g1_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw7code:/home/ubuntu/robotws/install/hw6code:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/ubuntu/host/packages/project_ws/src/g1_description -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/ubuntu/host/packages/project_ws/install/g1_description
+[0.253s] -- The C compiler identification is GNU 13.3.0
+[0.406s] -- The CXX compiler identification is GNU 13.3.0
+[0.434s] -- Detecting C compiler ABI info
+[0.730s] -- Detecting C compiler ABI info - done
+[0.756s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.757s] -- Detecting C compile features
+[0.757s] -- Detecting C compile features - done
+[0.781s] -- Detecting CXX compiler ABI info
+[1.075s] -- Detecting CXX compiler ABI info - done
+[1.103s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[1.103s] -- Detecting CXX compile features
+[1.104s] -- Detecting CXX compile features - done
+[1.138s] -- Found ament_cmake: 2.5.4 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[1.281s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[1.363s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[1.647s] -- Found ament_lint_auto: 0.17.3 (/opt/ros/jazzy/share/ament_lint_auto/cmake)
+[2.393s] -- Added test 'lint_cmake' to check CMake code style
+[2.706s] -- Added test 'xmllint' to check XML markup files
+[2.833s] -- Configuring done (2.8s)
+[3.110s] -- Generating done (0.2s)
+[3.176s] -- Build files have been written to: /home/ubuntu/host/packages/project_ws/build/g1_description
+[3.181s] Invoked command in '/home/ubuntu/host/packages/project_ws/build/g1_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw7code:/home/ubuntu/robotws/install/hw6code:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/ubuntu/host/packages/project_ws/src/g1_description -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/ubuntu/host/packages/project_ws/install/g1_description
+[3.186s] Invoking command in '/home/ubuntu/host/packages/project_ws/build/g1_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw7code:/home/ubuntu/robotws/install/hw6code:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/ubuntu/host/packages/project_ws/build/g1_description -- -j3 -l3
+[3.325s] Invoked command in '/home/ubuntu/host/packages/project_ws/build/g1_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw7code:/home/ubuntu/robotws/install/hw6code:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/ubuntu/host/packages/project_ws/build/g1_description -- -j3 -l3
+[3.340s] Invoking command in '/home/ubuntu/host/packages/project_ws/build/g1_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw7code:/home/ubuntu/robotws/install/hw6code:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/ubuntu/host/packages/project_ws/build/g1_description
+[3.351s] -- Install configuration: ""
+[3.355s] -- Execute custom install script
+[3.375s] -- Symlinking: /home/ubuntu/host/packages/project_ws/install/g1_description/share/g1_description/urdf/g1_23dof.urdf
+[3.468s] [31mCMake Error at ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:302 (message):
+[3.469s]   Could not create symlink
+[3.469s]   '/home/ubuntu/host/packages/project_ws/install/g1_description/share/g1_description/urdf/g1_23dof.urdf'
+[3.470s]   pointing to
+[3.470s]   '/home/ubuntu/host/packages/project_ws/src/g1_description/urdf/g1_23dof.urdf'
+[3.470s] Call Stack (most recent call first):
+[3.471s]   ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:96 (_ament_cmake_symlink_install_create_symlink)
+[3.472s]   ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:314 (ament_cmake_symlink_install_directory)
+[3.472s]   cmake_install.cmake:46 (include)
+[3.473s] 
+[3.473s] [0m
+[3.474s] Invoked command in '/home/ubuntu/host/packages/project_ws/build/g1_description' returned '1': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/ubuntu/robotws/install/utils:/home/ubuntu/robotws/install/hw7code:/home/ubuntu/robotws/install/hw6code:/home/ubuntu/robotws/install/hw5code:/home/ubuntu/robotws/install/hw4code:/home/ubuntu/robotws/install/hw3code:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/ubuntu/host/packages/project_ws/build/g1_description
