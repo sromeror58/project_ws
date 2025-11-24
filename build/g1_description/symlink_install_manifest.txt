@@ -1,1 +1,0 @@
-/home/ubuntu/host/packages/project_ws/install/g1_description/share/g1_description/urdf/g1_23dof.urdf
