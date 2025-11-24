@@ -1,0 +1,16 @@
+# ROS2 build artifacts
+build/
+install/
+log/
+*/build/
+*/install/
+*/log/
+
+# macOS files
+.DS_Store
+**/.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+
