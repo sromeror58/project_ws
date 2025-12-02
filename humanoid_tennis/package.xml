@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>humanoid_tennis</name>
+  <version>0.0.0</version>
+  <description>Humanoid tennis arm demo for 133a</description>
+
+  <maintainer email="robot@todo.todo">robot</maintainer>
+  <license>MIT</license>
+
+  <!-- Python build system -->
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <!-- Runtime deps -->
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>ament_index_python</depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
