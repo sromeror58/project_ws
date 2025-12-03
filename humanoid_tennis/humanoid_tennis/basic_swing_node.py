@@ -17,7 +17,8 @@ from rclpy.duration import Duration
 # Grab the Utilities
 from utils.TransformHelpers     import *
 from utils.TrajectoryUtils      import *
-from hw5code.KinematicChain     import KinematicChain
+from hw5sols.KinematicChainSol     import KinematicChain
+from humanoid_tennis.utils.TransformHelpers import *
 
 
 
@@ -69,7 +70,7 @@ class SwingNode(Node):
         self.i_ra = indexlist(self.n_joints - 7, self.n_joints)
         self.Jblank = np.zeros((3, N_ra))
         
-        self.chain = KinematicChain(self, 'o', 'ra', [self.joint_names[i] for i in self.i_ra])
+        self.chain = KinematicChain(self, 'torso_link', 'right_rubber_hand', [self.joint_names[i] for i in self.i_ra])
         
 
         #gains and parameters
@@ -84,14 +85,16 @@ class SwingNode(Node):
 
         
         self.start_time = None
-        self.swing_duration = 0.8 #seconds to hit
+        self.swing_duration = 2.0 #seconds to hit
 
         #trajectory waypoints
         self.q_0 = [0] * self.n_joints
         self.q_0[-4] = pi/2 # elbow joint
-        (self.p_start, self.R_start, _, _) = self.chain.fkin(self.q_0[self.i_ra])
+        (self.p_start, self.R_start, _, _) = self.chain.fkin(self.q_0[self.i_ra[0]:self.i_ra[-1]+1])
         self.p_idle = self.p_start
-        self.p_swing = np.array([0.8, -0.2, 1.0]) 
+        self.p_swing = np.array([0.8, -0.2, 1.0]) ###########################################################################################
+        # Rotation of -90 degrees around Z axis
+        self.R_target = Rotz(-np.pi/2) 
 
         #stored command/error states
         self.qc = np.zeros(self.n_joints)
@@ -115,8 +118,19 @@ class SwingNode(Node):
         if not self.have_state:
             self.qc = self.extract_joints(msg)
             self.have_state = True
+            self.get_logger().info("Received first joint state!")
         else:
             self.qc = self.extract_joints(msg)
+
+    def extract_joints(self, msg):
+        q = np.zeros(self.n_joints)
+        for i in range(self.n_joints):
+            try:
+                index = msg.name.index(self.joint_names[i])
+                q[i] = msg.position[index]
+            except ValueError:
+                return None
+        return q
 
 
     def shutdown(self):
@@ -141,12 +155,17 @@ class SwingNode(Node):
                 s, sdot = goto(self.t, self.swing_duration, 0.0, 1.0)
                 pd = self.p_idle + (self.p_swing - self.p_idle) * s
                 vd = (self.p_swing - self.p_idle) * sdot
+                #orientation is just constant
+                Rd = Rinter(self.R_start, self.R_target, s)
+                wd = winter(self.R_start, self.R_target, sdot)
+
             else:
+                #end of phase 1
                 self.state = "RETURN"
                 self.get_logger().info("Swing complete, Returning!")
                 self.t = 0.0
                 return
-            self.ik(pd, vd)
+            self.ik(pd, vd, Rd, wd)
         elif self.state == "RETURN":
             if self.t <= self.swing_duration:
                 s, sdot = goto(self.t, self.swing_duration, 0.0, 1.0)
@@ -157,31 +176,34 @@ class SwingNode(Node):
                 self.get_logger().info("Returning to idle!")
                 self.t = 0.0
                 return
-            self.ik(pd, vd)
+            self.ik(pd, vd, self.R_start, np.zeros(3))
 
-    def ik(self, pd, vd):
-        q_ra = self.qc[self.i_ra]
+    def ik(self, pd, vd, Rd, wd):
+        q_ra = self.qc[self.i_ra[0]:self.i_ra[-1]+1]
         (pc, Rc, Jv, Jw) = self.chain.fkin(q_ra)
         
         err_p = ep(pd, pc)
         err_R = eR(Rd, Rc) #orientation error
 
+        #reference velocity
         vr = vd + self.lam * err_p
-        wr = self.lam * err_R
+        wr = wd + self.lam * err_R
 
-        xdot = np.concatenate((vr, wr))
+        x_dot_ref = np.concatenate((vr, wr))
         J = np.vstack((Jv, Jw))
 
         damp = (self.gamma**2) * np.eye(6)
-        qdot_ra = J.T @ np.linalg.inv(J @ J.T + damp) @ xdot
+        qdot_ra = J.T @ np.linalg.inv(J @ J.T + damp) @ x_dot_ref
 
         # change joint command
-        self.qc[self.i_ra] += qdot_ra * self.dt
+        self.qc[self.i_ra[0]:self.i_ra[-1]+1] += qdot_ra * self.dt
+        #self.get_logger().info(f"Published command: {self.qc[self.i_ra[0]:self.i_ra[-1]+1].tolist()}")  
         
         # Publish command
         msg = Float64MultiArray()
         msg.data = self.qc.tolist()
         self.pub_cmd.publish(msg)
+        # self.get_logger().info(f"Published command: {msg.data[:5]}...")
 
 #
 #  Main Code

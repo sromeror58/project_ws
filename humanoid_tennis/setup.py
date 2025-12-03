@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'basic_swing_node = humanoid_tennis.basic_swing_node:main',
+            'simple_sim_node = humanoid_tennis.simple_sim_node:main',
         ],
     },
 )

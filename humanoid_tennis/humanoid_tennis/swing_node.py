@@ -16,14 +16,14 @@ from std_msgs.msg import Float64
 # Grab the Utilities
 from utils.TransformHelpers     import *
 from utils.TrajectoryUtils      import *
-from hw5code.KinematicChain     import KinematicChain
+from hw5sols.KinematicChainSol     import KinematicChain
 
 
 
 class SwingNode(Node):
     def __init__(self):
         super().__init__('swing_node')
-        self.chain = KinematicChain(self, 'torso_link', 'hand_palm_link')
+        self.chain = KinematicChain(self, 'torso_link', 'right_rubber_hand')
         self.joint_names = [
             'left_hip_pitch_joint',
             'left_hip_roll_joint',

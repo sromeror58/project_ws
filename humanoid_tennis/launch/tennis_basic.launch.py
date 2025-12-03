@@ -65,10 +65,19 @@ def generate_launch_description():
         output='screen',
     )
 
+    # Simple Simulation Node
+    node_sim = Node(
+        name='simple_sim',
+        package='humanoid_tennis',
+        executable='simple_sim_node',
+        output='screen',
+    )
+
     ######################################################################
     # RETURN
     return LaunchDescription([
         node_robot_state_publisher,
         node_rviz,
         node_tennis,
+        node_sim,
     ])
