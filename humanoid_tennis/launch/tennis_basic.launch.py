@@ -61,7 +61,7 @@ def generate_launch_description():
     node_tennis = Node(
         name='tennis_arm',
         package='humanoid_tennis',
-        executable='basic_swing_node', #change this if you change the node
+        executable='swing_node', #change this if you change the node
         output='screen',
     )
 
@@ -73,6 +73,14 @@ def generate_launch_description():
         output='screen',
     )
 
+    # Ball Spawner Node
+    node_ball_spawner = Node(
+        name='ball_spawner',
+        package='ball_spawner',
+        executable='ball_spawner_node',
+        output='screen',
+    )
+
     ######################################################################
     # RETURN
     return LaunchDescription([
@@ -80,4 +88,5 @@ def generate_launch_description():
         node_rviz,
         node_tennis,
         node_sim,
+        node_ball_spawner,
     ])

@@ -171,12 +171,16 @@ class SwingNode(Node):
                 s, sdot = goto(self.t, self.swing_duration, 0.0, 1.0)
                 pd = self.p_swing + (self.p_idle - self.p_swing) * s
                 vd = (self.p_idle - self.p_swing) * sdot
+
+                # Spline orientation back to start
+                Rd = Rinter(self.R_target, self.R_start, s)
+                wd = winter(self.R_target, self.R_start, sdot)
             else:
                 self.state = "IDLE"
                 self.get_logger().info("Returning to idle!")
                 self.t = 0.0
                 return
-            self.ik(pd, vd, self.R_start, np.zeros(3))
+            self.ik(pd, vd, Rd, wd)
 
     def ik(self, pd, vd, Rd, wd):
         q_ra = self.qc[self.i_ra[0]:self.i_ra[-1]+1]
