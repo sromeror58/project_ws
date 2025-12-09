@@ -13,6 +13,7 @@ from math import pi, sin, cos, acos, atan2, sqrt
 from humanoid_tennis.utils.TransformHelpers import *
 from humanoid_tennis.utils.TrajectoryUtils import *
 from hw5sols.KinematicChainSol import KinematicChain
+# from hw5code.KinematicChain import KinematicChain
 
 class SwingNode(Node):
     def __init__(self):
@@ -60,6 +61,19 @@ class SwingNode(Node):
         # Kinematic Chain from torso_link to right_rubber_hand
         self.chain = KinematicChain(self, 'torso_link', 'right_rubber_hand', [self.joint_names[i] for i in self.i_chain])
         
+        # Joint limits for the chain (Right Arm)
+        # Indices: 22, 23, 24, 25, 26, 27, 28
+        # Limits from URDF (approx) + User constraints
+        self.chain_limits = [
+            (-3.08, 2.67), # Shoulder Pitch
+            (-2.25, 1.58), # Shoulder Roll
+            (-2.61, 2.61), # Shoulder Yaw
+            (-1.04, 2.09), # Elbow
+            (-1.97, 1.97), # Wrist Roll
+            (-1.04, 1.04), # Wrist Pitch (User constrained)
+            (-1.04, 1.04)  # Wrist Yaw (User constrained)
+        ]
+        
         # TF Buffer
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
@@ -74,7 +88,7 @@ class SwingNode(Node):
         self.idle_wait = 0.5
         
         self.start_time = None
-        self.swing_duration = 2.0 #seconds to hit
+        self.swing_duration = 2.5 #seconds to hit
 
         #trajectory waypoints
         self.q_0 = [0.0] * self.n_joints
@@ -87,6 +101,9 @@ class SwingNode(Node):
         
         self.p_idle = self.p_start
         self.p_swing = self.p_idle # Will be updated by ball callback
+        self.q_target = np.array([self.q_0[i] for i in self.i_chain])
+        self.q_start = np.array([self.q_0[i] for i in self.i_chain])
+
         
         # Rotation of -90 degrees around Z axis
         self.R_target = Rotz(-np.pi/2) 
@@ -157,8 +174,8 @@ class SwingNode(Node):
         marker_target.scale.y = 0.1
         marker_target.scale.z = 0.1
         marker_target.color.a = 1.0
-        marker_target.color.r = 1.0
-        marker_target.color.g = 0.0
+        marker_target.color.r = 0.0
+        marker_target.color.g = 1.0
         marker_target.color.b = 0.0
         self.marker_pub.publish(marker_target)
 
@@ -174,8 +191,8 @@ class SwingNode(Node):
         marker_traj.scale.x = 0.02
         marker_traj.color.a = 1.0
         marker_traj.color.r = 0.0
-        marker_traj.color.g = 1.0
-        marker_traj.color.b = 0.0
+        marker_traj.color.g = 0.0
+        marker_traj.color.b = 1.0
         marker_traj.points = self.trajectory_points
         self.marker_pub.publish(marker_traj)
 
@@ -203,6 +220,7 @@ class SwingNode(Node):
                     
                     # p_torso = R * p_pelvis + t
                     self.p_swing = R_mat @ self.ball_position + t_p
+                    self.q_target = self.newton_raphson(self.p_swing, self.R_target, self.q_start)
                     
                     self.state = "SWINGING"
                     self.get_logger().info(f"Started Swinging at {self.p_swing} (torso frame)!")
@@ -215,19 +233,24 @@ class SwingNode(Node):
                     return
                 
         elif self.state == "SWINGING":
+            # p_swing -> q_swing
+        
             if self.t <= self.swing_duration:
+                # 1. Get interpolation factor s (0 to 1)
                 s, sdot = goto(self.t, self.swing_duration, 0.0, 1.0)
-                pd = self.p_idle + (self.p_swing - self.p_idle) * s
-                vd = (self.p_swing - self.p_idle) * sdot
                 
-                #orientation spline
-                Rd = Rinter(self.R_start, self.R_target, s)
-                wd = winter(self.R_start, self.R_target, sdot)
+                # 2. Interpolate manually using s
+                q_d = self.q_start + (self.q_target - self.q_start) * s
+                qdot_d = (self.q_target - self.q_start) * sdot
+                
+                # 3. Forward Kinematics
+                (pd, Rd, Jv, Jw) = self.chain.fkin(q_d)
+                
+                vd = Jv @ qdot_d
+                wd = Jw @ qdot_d
                 
                 # Visualize
-                q_chain = np.array([self.qc[i] for i in self.i_chain])
-                (pc, _, _, _) = self.chain.fkin(q_chain)
-                self.publish_markers(self.p_swing, pc)
+                self.publish_markers(self.p_swing, pd)
 
             else:
                 #end of phase 1
@@ -239,13 +262,18 @@ class SwingNode(Node):
             
         elif self.state == "RETURN":
             if self.t <= self.swing_duration:
+                # 1. Get interpolation factor s (0 to 1)
                 s, sdot = goto(self.t, self.swing_duration, 0.0, 1.0)
-                pd = self.p_swing + (self.p_idle - self.p_swing) * s
-                vd = (self.p_idle - self.p_swing) * sdot
+                
+                # 2. Interpolate manually using s (Joint Space)
+                # Return to q_start (which is q_0)
+                q_d = self.q_target + (self.q_start - self.q_target) * s
+                qdot_d = (self.q_start - self.q_target) * sdot
 
-                # Spline orientation back to start
-                Rd = Rinter(self.R_target, self.R_start, s)
-                wd = winter(self.R_target, self.R_start, sdot)
+                # 3. Forward Kinematics
+                (pd, Rd, Jv, Jw) = self.chain.fkin(q_d)
+                vd = Jv @ qdot_d
+                wd = Jw @ qdot_d
             else:
                 self.state = "IDLE"
                 self.get_logger().info("Returning to idle!")
@@ -253,6 +281,46 @@ class SwingNode(Node):
                 return
             self.ik(pd, vd, Rd, wd)
 
+
+    def newton_raphson(self, p_target, R_target, q_guess, max_iter=10, tol=1e-6):
+        """
+        Calculates joint angles (q) for a given target position (p) and rotation (R).
+        """
+        # q = np.array(q_guess) # Start from a guess (e.g., current position)
+        q = q_guess
+        for i in range(20): # Try 20 iterations
+            # 1. Calculate where we are now
+            (p_curr, R_curr, Jv, Jw) = self.chain.fkin(q)
+            
+            # 2. Calculate error
+            err_p = p_target - p_curr
+            err_R = eR(R_target, R_curr) # Orientation error
+            
+            error = np.concatenate((err_p, err_R))
+            
+            # 3. Check if we are close enough
+            if np.linalg.norm(error) < 1e-4:
+                return q
+                
+            # 4. Calculate step using Jacobian
+            J = np.vstack((Jv, Jw))
+            damp = 1e-3 * np.eye(6) # Damping to prevent instability
+            
+            # dq = J_pinv * error
+            dq = J.T @ np.linalg.inv(J @ J.T + damp) @ error
+            
+            # 5. Update q
+            q += dq
+
+            # 6. Wrap to stay close to guess (prevent spinning)
+            # This ensures we pick the solution closest to our start configuration
+            q = q_guess + (q - q_guess + np.pi) % (2 * np.pi) - np.pi
+            
+            # 7. Clamp to limits
+            for j in range(len(q)):
+                q[j] = np.clip(q[j], self.chain_limits[j][0], self.chain_limits[j][1])
+            
+        return q # Return best effort after 20 tries
     def ik(self, pd, vd, Rd, wd):
         # Extract current chain configuration
         q_chain = np.array([self.qc[i] for i in self.i_chain])
