@@ -2,9 +2,9 @@
 build/
 install/
 log/
-*/build/
-*/install/
-*/log/
+**/build/
+**/install/
+**/log/
 
 # macOS files
 .DS_Store
@@ -12,5 +12,5 @@ log/
 
 # Python cache
 __pycache__/
+**/__pycache__/
 *.pyc
-
