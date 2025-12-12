@@ -106,9 +106,8 @@ class SwingNode(Node):
         self.p_swing = self.p_idle # Will be updated by ball callback
         self.q_target = np.array([self.q_0[i] for i in self.i_chain])
         self.q_start = np.array([self.q_0[i] for i in self.i_chain])
+        self.q_return_start = np.array([self.q_0[i] for i in self.i_chain])
 
-        
-        # Rotation of -90 degrees around Z axis
         self.R_target = Rotz(-np.pi/2) 
 
         #stored command/error states
@@ -275,6 +274,8 @@ class SwingNode(Node):
             else:
                 #end of phase 1
                 self.state = "RETURN"
+                # Capture actual current state to avoid jump
+                self.q_return_start = np.array([self.qc[i] for i in self.i_chain])
                 self.get_logger().info("Swing complete, Returning!")
                 self.t = 0.0
                 return
@@ -287,7 +288,7 @@ class SwingNode(Node):
                 # 2. Interpolate manually using s (Joint Space)
                 # Return to q_0 (rest pose) explicitly
                 q_rest = np.array([self.q_0[i] for i in self.i_chain])
-                q_d = self.q_target + (q_rest - self.q_target) * s
+                q_d = self.q_return_start + (q_rest - self.q_return_start) * s
 
                 # 3. Publish directly (no IK)
                 q_cmd = self.qc.copy()
