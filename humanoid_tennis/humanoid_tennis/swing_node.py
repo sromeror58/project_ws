@@ -81,24 +81,24 @@ class SwingNode(Node):
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
         
-        #gains and parameters
-        self.lam = 10.0 # error correction gain for ikin
+        # Correction params
+        self.lam = 10.0 # error correction for ikin
         self.gamma = 0.1 # damping factor
         self.dt = 0.01  #100hz
 
-        #state machine
+        # state machine
         self.state = "IDLE"     
         self.idle_wait = 0.5
         
         self.start_time = None
-        self.swing_duration = 2.0 #seconds to hit
+        # seconds to hit
+        self.swing_duration = 2.0 
 
-        #trajectory waypoints
+        # idle state joints
         self.q_0 = [0.0] * self.n_joints
         self.q_0[-4] = pi/2 # elbow joint
         
         # Calculate initial pose
-        # We need to extract the chain joints from q_0
         q_chain_init = np.array([self.q_0[i] for i in self.i_chain])
         (self.p_start, self.R_start, _, _) = self.chain.fkin(q_chain_init)
         
@@ -108,9 +108,10 @@ class SwingNode(Node):
         self.q_start = np.array([self.q_0[i] for i in self.i_chain])
         self.q_return_start = np.array([self.q_0[i] for i in self.i_chain])
 
+        # target orientation
         self.R_target = Rotz(-np.pi/2) 
 
-        #stored command/error states
+        # joint command
         self.qc = np.zeros(self.n_joints)
         self.have_state = False
         
@@ -123,26 +124,25 @@ class SwingNode(Node):
         self.marker_pub = self.create_publisher(Marker, '/swing_markers', 10)
         self.trajectory_points = []
 
-        #ros publishers
+        # ros publishers
         self.pub_cmd = self.create_publisher(Float64MultiArray, '/forward_command_controller/commands', 10)
         self.tfbroad = tf2_ros.TransformBroadcaster(self)
 
         self.create_subscription(JointState, '/joint_states', self.joint_state_callback, 10)
 
-        #timer
+        # timer
         self.t = 0.0
         self.now = self.get_clock().now()
         self.timer = self.create_timer(self.dt, self.update)
         self.get_logger().info("Swing Node init")
 
     def ball_callback(self, msg):
+        # update ball position
         self.ball_position = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
-        # Only trigger if we are IDLE? Or update target if swinging?
-        # For now, let's just flag it. The update loop will handle the trigger.
         self.new_ball = True
-        # self.get_logger().info(f"Ball detected at {self.ball_position}")
 
     def extract_joints(self, msg):
+        # extract joint positions
         q = np.zeros(self.n_joints)
         for i in range(self.n_joints):
             try:
@@ -153,6 +153,7 @@ class SwingNode(Node):
         return q
 
     def joint_state_callback(self, msg):
+        # update joint state
         if not self.have_state:
             self.qc = self.extract_joints(msg)
             self.have_state = True
@@ -163,9 +164,7 @@ class SwingNode(Node):
     def publish_markers(self, target_pos, current_pos):
         # Target Marker
         marker_target = Marker()
-        marker_target.header.frame_id = "pelvis" # Updated because our root is effectively pelvis now (though markers usually global, pelvis is our new chain root)
-        # Actually it's probably better to keep it 'torso_link' if that's what we want to visualize relative to, OR 'pelvis' if we want absolute.
-        # Let's use 'pelvis' to align with the chain base.
+        marker_target.header.frame_id = "pelvis" 
         marker_target.header.stamp = self.get_clock().now().to_msg()
         marker_target.ns = "target"
         marker_target.id = 0
@@ -210,25 +209,6 @@ class SwingNode(Node):
         if self.state == "IDLE":
             # Check for ball
             if self.new_ball:
-                # Transform ball to pelvis 
-                # (Since our chain starts at pelvis, and ball is in global/sim frame... wait)
-                # The code previously said "ball is in pelvis frame". 
-                # "The ball is in pelvis frame." -> Line 212 of original
-                # "Look up transform from pelvis (source) to torso_link (target)"
-                
-                # If our chain is now 'pelvis' -> 'hand', we just need target in 'pelvis' frame.
-                # If ball is already in 'pelvis', we don't need to transform it to 'torso_link'.
-                # Assuming ball_pose is in world/pelvis?
-                # Line 137: msg.pose.position...
-                # The spawner likely spawns in world, or relative to something.
-                # The original code:
-                # trans = self.tf_buffer.lookup_transform('torso_link', 'pelvis', ...)
-                # p_swing = R * p_pelvis + t
-                # This implied ball_msg was in pelvis frame, and we needed it in torso frame.
-                
-                # NOW: Our chain is in PELVIS frame.
-                # So if ball is in pelvis frame, we can use it directly!
-                
                 self.p_swing = self.ball_position 
                 
                 # Capture current start pose (Joint Space)
@@ -237,44 +217,43 @@ class SwingNode(Node):
                 # Solve for target joint configuration using q_start as seed (find nearest solution)
                 self.q_target = self.newton_raphson(self.p_swing, self.R_target, self.q_start.copy())
                 
-                # Update p_start/R_start just for logging/debugging
+                # update position and orientation of start pose
                 (self.p_start, self.R_start, _, _) = self.chain.fkin(self.q_start)
                 
                 self.state = "SWINGING"
                 self.get_logger().info(f"Started Swinging at {self.p_swing} (pelvis frame)!")
+                # reset time for smooth state transition
                 self.t = 0.0
-                self.new_ball = False # Reset flag
-                self.trajectory_points = [] # Clear trajectory
+                self.new_ball = False 
+                self.trajectory_points = [] 
                 return
                 
         elif self.state == "SWINGING":
             # p_swing -> q_swing (Joint Space Interpolation)
         
             if self.t <= self.swing_duration:
-                # 1. Get interpolation factor s (0 to 1)
+                # Get interpolation factor s (0 to 1)
                 s, sdot = goto(self.t, self.swing_duration, 0.0, 1.0)
                 
-                # 2. Joint Space Interpolation
                 # Calculate current desired joint configuration
                 q_d = self.q_start + (self.q_target - self.q_start) * s
                 qdot_d = (self.q_target - self.q_start) * sdot
                 
-                # 3. Forward Kinematics (to get task space target for IK/Vis)
+                # Forward Kinematics
                 (pd, Rd, Jv, Jw) = self.chain.fkin(q_d)
                 
                 vd = Jv @ qdot_d
                 wd = Jw @ qdot_d
                 
-                # 4. Inverse Kinematics (Control)
+                # Inverse Kinematics 
                 self.ik(pd, vd, Rd, wd)
 
-                # Visualize
+                # publish
                 self.publish_markers(self.p_swing, pd)
 
             else:
-                #end of phase 1
+                # end of phase 1, begin return to idle state
                 self.state = "RETURN"
-                # Capture actual current state to avoid jump
                 self.q_return_start = np.array([self.qc[i] for i in self.i_chain])
                 self.get_logger().info("Swing complete, Returning!")
                 self.t = 0.0
@@ -282,15 +261,14 @@ class SwingNode(Node):
             
         elif self.state == "RETURN":
             if self.t <= self.swing_duration:
-                # 1. Get interpolation factor s (0 to 1)
+                # Get interpolation factor s (0 to 1)
                 s, sdot = goto(self.t, self.swing_duration, 0.0, 1.0)
                 
-                # 2. Interpolate manually using s (Joint Space)
-                # Return to q_0 (rest pose) explicitly
+                # Interpolate manually using s (Joint Space)
                 q_rest = np.array([self.q_0[i] for i in self.i_chain])
                 q_d = self.q_return_start + (q_rest - self.q_return_start) * s
 
-                # 3. Publish directly (no IK)
+                # Publish 
                 q_cmd = self.qc.copy()
                 for k, idx in enumerate(self.i_chain):
                     q_min, q_max = self.chain_limits[k]
@@ -301,6 +279,7 @@ class SwingNode(Node):
                 self.pub_cmd.publish(msg)
                 
             else:
+                # made it to idle state
                 self.state = "IDLE"
                 self.get_logger().info("Returning to idle!")
                 self.t = 0.0
@@ -313,43 +292,38 @@ class SwingNode(Node):
         """
         q = q_guess
         for i in range(20): # Try 20 iterations
-            # 1. Calculate where we are now
+            # Calculate where we are now
             (p_curr, R_curr, Jv, Jw) = self.chain.fkin(q)
             
-            # 2. Calculate error
+            # Calculate error
             err_p = p_target - p_curr
-            err_R = eR(R_target, R_curr) # Orientation error 3x1
+            err_R = eR(R_target, R_curr)
             
             error_full = np.concatenate((err_p, err_R))
             
-            # Reduce to 5x1 -> remove last element (z-rot error which corresponds to index 5)
-            # err_R is [rx, ry, rz]
-            # error_full is [px, py, pz, rx, ry, rz]
-            # We want [px, py, pz, rx, ry]
+            # Reduce to 5x1 since we dont need z rot
             error = error_full[:5]
             
-            # 3. Check if we are close enough
+            # Check if we are close enough
             if np.linalg.norm(error) < 1e-4:
                 return q
                 
-            # 4. Calculate step using Jacobian
+            # Calculate step using Jacobian
             J_full = np.vstack((Jv, Jw))
             
             # Reduce J to 5xN
             J = J_full[:5, :]
             
-            damp = 1e-3 * np.eye(5) # Damping 5x5
+            damp = 1e-3 * np.eye(5)
             
             # dq = J_pinv * error
             dq = J.T @ np.linalg.inv(J @ J.T + damp) @ error
-            
-            # 5. Update q
             q += dq
 
-            # 6. Wrap to stay close to guess (prevent spinning)
+            # Wrap to prevent aggressive spinning
             q = q_guess + (q - q_guess + np.pi) % (2 * np.pi) - np.pi
             
-            # 7. Clamp to limits
+            # Clamp to limits
             for j in range(len(q)):
                 q[j] = np.clip(q[j], self.chain_limits[j][0], self.chain_limits[j][1])
             
@@ -361,14 +335,14 @@ class SwingNode(Node):
         
         (pc, Rc, Jv, Jw) = self.chain.fkin(q_chain)
         
-        err_p = ep(pd, pc) #translation error
-        err_R = eR(Rd, Rc) #orientation error
+        err_p = ep(pd, pc)
+        err_R = eR(Rd, Rc)
 
-        #reference velocity
+        # reference velocity
         vr = vd + self.lam * err_p
         wr = wd + self.lam * err_R
 
-        x_dot_ref_full = np.concatenate((vr, wr)) # 6x1
+        x_dot_ref_full = np.concatenate((vr, wr)) 
         
         # Reduce to 5x1
         x_dot_ref = x_dot_ref_full[:5]
@@ -382,11 +356,8 @@ class SwingNode(Node):
         qdot_chain = J.T @ np.linalg.inv(J @ J.T + damp) @ x_dot_ref
 
         # change joint command
-        # Map chain velocities back to full joint vector
         for k, idx in enumerate(self.i_chain):
-            # integrate
             q_next = self.qc[idx] + qdot_chain[k] * self.dt
-
             # apply per-joint limits for the chain
             q_min, q_max = self.chain_limits[k]
             self.qc[idx] = float(np.clip(q_next, q_min, q_max))
