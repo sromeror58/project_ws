@@ -230,17 +230,16 @@ class SwingNode(Node):
                 # NOW: Our chain is in PELVIS frame.
                 # So if ball is in pelvis frame, we can use it directly!
                 
-                self.p_swing = self.ball_position # Ball is already in pelvis frame? Assuming yes based on prev code comments.
+                self.p_swing = self.ball_position 
                 
-                # We need to consider that ball_position might be rotated if extracted from msg incorrectly?
-                # Original code did: p_swing = R_mat @ self.ball_position + t_p
-                # Meaning it transformed FROM pelvis TO torso.
-                # If we are now IN pelvis frame, and ball IS in pelvis frame, we just assign.
+                # Capture current start pose (Joint Space)
+                self.q_start = np.array([self.qc[i] for i in self.i_chain])
                 
-                # But wait, let's verify if p_swing needs to be offset.
-                # If the ball message is "in pelvis frame", then yes, p_swing (target) = ball_position.
+                # Solve for target joint configuration using q_start as seed (find nearest solution)
+                self.q_target = self.newton_raphson(self.p_swing, self.R_target, self.q_start.copy())
                 
-                self.q_target = self.newton_raphson(self.p_swing, self.R_target, self.q_start)
+                # Update p_start/R_start just for logging/debugging
+                (self.p_start, self.R_start, _, _) = self.chain.fkin(self.q_start)
                 
                 self.state = "SWINGING"
                 self.get_logger().info(f"Started Swinging at {self.p_swing} (pelvis frame)!")
@@ -250,22 +249,26 @@ class SwingNode(Node):
                 return
                 
         elif self.state == "SWINGING":
-            # p_swing -> q_swing
+            # p_swing -> q_swing (Joint Space Interpolation)
         
             if self.t <= self.swing_duration:
                 # 1. Get interpolation factor s (0 to 1)
                 s, sdot = goto(self.t, self.swing_duration, 0.0, 1.0)
                 
-                # 2. Interpolate manually using s
+                # 2. Joint Space Interpolation
+                # Calculate current desired joint configuration
                 q_d = self.q_start + (self.q_target - self.q_start) * s
                 qdot_d = (self.q_target - self.q_start) * sdot
                 
-                # 3. Forward Kinematics
+                # 3. Forward Kinematics (to get task space target for IK/Vis)
                 (pd, Rd, Jv, Jw) = self.chain.fkin(q_d)
                 
                 vd = Jv @ qdot_d
                 wd = Jw @ qdot_d
                 
+                # 4. Inverse Kinematics (Control)
+                self.ik(pd, vd, Rd, wd)
+
                 # Visualize
                 self.publish_markers(self.p_swing, pd)
 
@@ -275,7 +278,6 @@ class SwingNode(Node):
                 self.get_logger().info("Swing complete, Returning!")
                 self.t = 0.0
                 return
-            self.ik(pd, vd, Rd, wd)
             
         elif self.state == "RETURN":
             if self.t <= self.swing_duration:
