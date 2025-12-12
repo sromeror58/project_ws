@@ -1052,11 +1052,8 @@
   <joint name="racket_fixed_joint" type="fixed">
     <parent link="right_rubber_hand"/>
     <child link="pingpong_racket"/>
-    <origin xyz="-0.05 0.00 0.02" rpy="0 -1.57 0"/>
+    <!-- Move racket forward, slightly down, and rotate so paddle face is vertical -->
+    <origin xyz="0.0 0.02 0.02" rpy="1.57 -1.57 1.57"/>
   </joint>
-
-
-
-
 
 </robot>

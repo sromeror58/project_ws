@@ -29,8 +29,8 @@ class BallSpawner(Node):
 
     def spawn_ball(self):
         # Random coordinates in front of G1
-        x = random.uniform(0.25, 0.6)
-        y = random.uniform(-0.3, 0.3)
+        x = random.uniform(0.25, 0.5)
+        y = random.uniform(-0.15, 0.15)
         z = random.uniform(0.6, 0.1)
 
 

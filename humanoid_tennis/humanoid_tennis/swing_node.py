@@ -53,25 +53,28 @@ class SwingNode(Node):
         # Indices for waist (3) + right arm (7)
         # Waist joints: 12, 13, 14
         # Right arm joints: 22, 23, 24, 25, 26, 27, 28
-        # self.i_waist = [12, 13, 14]
+        self.i_waist = [12, 13, 14]
         self.i_arm = [22, 23, 24, 25, 26, 27, 28]
-        self.i_chain = self.i_arm # Only arm
+        self.i_chain = self.i_waist + self.i_arm # Waist + Arm
         self.n_joints = len(self.joint_names)
         
-        # Kinematic Chain from torso_link to right_rubber_hand
-        self.chain = KinematicChain(self, 'torso_link', 'right_rubber_hand', [self.joint_names[i] for i in self.i_chain])
+        # Kinematic Chain from pelvis to right_rubber_hand
+        self.chain = KinematicChain(self, 'pelvis', 'right_rubber_hand', [self.joint_names[i] for i in self.i_chain])
         
-        # Joint limits for the chain (Right Arm)
-        # Indices: 22, 23, 24, 25, 26, 27, 28
-        # Limits from URDF (approx) + User constraints
+        # Joint limits for the chain (Waist + Right Arm)
+        # Waist: 12, 13, 14
+        # Arm: 22, 23, 24, 25, 26, 27, 28
         self.chain_limits = [
+            (-2*np.pi, 2*np.pi), # Waist Yaw
+            (-np.pi/6, np.pi/6), # Waist Roll
+            (-np.pi/6, np.pi/6), # Waist Pitch
             (-3.08, 2.67), # Shoulder Pitch
             (-2.25, 1.58), # Shoulder Roll
             (-2.61, 2.61), # Shoulder Yaw
             (-1.04, 2.09), # Elbow
             (-1.97, 1.97), # Wrist Roll
-            (-1.04, 1.04), # Wrist Pitch (User constrained)
-            (-1.04, 1.04)  # Wrist Yaw (User constrained)
+            (-1.04, 1.04), # Wrist Pitch
+            (-1.04, 1.04)  # Wrist Yaw
         ]
         
         # TF Buffer
@@ -88,7 +91,7 @@ class SwingNode(Node):
         self.idle_wait = 0.5
         
         self.start_time = None
-        self.swing_duration = 2.5 #seconds to hit
+        self.swing_duration = 2.0 #seconds to hit
 
         #trajectory waypoints
         self.q_0 = [0.0] * self.n_joints
@@ -161,7 +164,9 @@ class SwingNode(Node):
     def publish_markers(self, target_pos, current_pos):
         # Target Marker
         marker_target = Marker()
-        marker_target.header.frame_id = "torso_link"
+        marker_target.header.frame_id = "pelvis" # Updated because our root is effectively pelvis now (though markers usually global, pelvis is our new chain root)
+        # Actually it's probably better to keep it 'torso_link' if that's what we want to visualize relative to, OR 'pelvis' if we want absolute.
+        # Let's use 'pelvis' to align with the chain base.
         marker_target.header.stamp = self.get_clock().now().to_msg()
         marker_target.ns = "target"
         marker_target.id = 0
@@ -182,7 +187,7 @@ class SwingNode(Node):
         # Trajectory Marker
         self.trajectory_points.append(Point(x=current_pos[0], y=current_pos[1], z=current_pos[2]))
         marker_traj = Marker()
-        marker_traj.header.frame_id = "torso_link"
+        marker_traj.header.frame_id = "pelvis"
         marker_traj.header.stamp = self.get_clock().now().to_msg()
         marker_traj.ns = "trajectory"
         marker_traj.id = 1
@@ -206,31 +211,43 @@ class SwingNode(Node):
         if self.state == "IDLE":
             # Check for ball
             if self.new_ball:
-                # Transform ball to torso_link
-                try:
-                    # Look up transform from pelvis (source) to torso_link (target)
-                    # The ball is in pelvis frame.
-                    # We want p_torso.
-                    trans = self.tf_buffer.lookup_transform('torso_link', 'pelvis', rclpy.time.Time())
-                    
-                    # Extract transform
-                    t_p = np.array([trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
-                    r_q = np.array([trans.transform.rotation.x, trans.transform.rotation.y, trans.transform.rotation.z, trans.transform.rotation.w])
-                    R_mat = R_from_quat(r_q)
-                    
-                    # p_torso = R * p_pelvis + t
-                    self.p_swing = R_mat @ self.ball_position + t_p
-                    self.q_target = self.newton_raphson(self.p_swing, self.R_target, self.q_start)
-                    
-                    self.state = "SWINGING"
-                    self.get_logger().info(f"Started Swinging at {self.p_swing} (torso frame)!")
-                    self.t = 0.0
-                    self.new_ball = False # Reset flag
-                    self.trajectory_points = [] # Clear trajectory
-                    return
-                except Exception as e:
-                    self.get_logger().warn(f"Could not transform ball: {e}")
-                    return
+                # Transform ball to pelvis 
+                # (Since our chain starts at pelvis, and ball is in global/sim frame... wait)
+                # The code previously said "ball is in pelvis frame". 
+                # "The ball is in pelvis frame." -> Line 212 of original
+                # "Look up transform from pelvis (source) to torso_link (target)"
+                
+                # If our chain is now 'pelvis' -> 'hand', we just need target in 'pelvis' frame.
+                # If ball is already in 'pelvis', we don't need to transform it to 'torso_link'.
+                # Assuming ball_pose is in world/pelvis?
+                # Line 137: msg.pose.position...
+                # The spawner likely spawns in world, or relative to something.
+                # The original code:
+                # trans = self.tf_buffer.lookup_transform('torso_link', 'pelvis', ...)
+                # p_swing = R * p_pelvis + t
+                # This implied ball_msg was in pelvis frame, and we needed it in torso frame.
+                
+                # NOW: Our chain is in PELVIS frame.
+                # So if ball is in pelvis frame, we can use it directly!
+                
+                self.p_swing = self.ball_position # Ball is already in pelvis frame? Assuming yes based on prev code comments.
+                
+                # We need to consider that ball_position might be rotated if extracted from msg incorrectly?
+                # Original code did: p_swing = R_mat @ self.ball_position + t_p
+                # Meaning it transformed FROM pelvis TO torso.
+                # If we are now IN pelvis frame, and ball IS in pelvis frame, we just assign.
+                
+                # But wait, let's verify if p_swing needs to be offset.
+                # If the ball message is "in pelvis frame", then yes, p_swing (target) = ball_position.
+                
+                self.q_target = self.newton_raphson(self.p_swing, self.R_target, self.q_start)
+                
+                self.state = "SWINGING"
+                self.get_logger().info(f"Started Swinging at {self.p_swing} (pelvis frame)!")
+                self.t = 0.0
+                self.new_ball = False # Reset flag
+                self.trajectory_points = [] # Clear trajectory
+                return
                 
         elif self.state == "SWINGING":
             # p_swing -> q_swing
@@ -266,27 +283,31 @@ class SwingNode(Node):
                 s, sdot = goto(self.t, self.swing_duration, 0.0, 1.0)
                 
                 # 2. Interpolate manually using s (Joint Space)
-                # Return to q_start (which is q_0)
-                q_d = self.q_target + (self.q_start - self.q_target) * s
-                qdot_d = (self.q_start - self.q_target) * sdot
+                # Return to q_0 (rest pose) explicitly
+                q_rest = np.array([self.q_0[i] for i in self.i_chain])
+                q_d = self.q_target + (q_rest - self.q_target) * s
 
-                # 3. Forward Kinematics
-                (pd, Rd, Jv, Jw) = self.chain.fkin(q_d)
-                vd = Jv @ qdot_d
-                wd = Jw @ qdot_d
+                # 3. Publish directly (no IK)
+                q_cmd = self.qc.copy()
+                for k, idx in enumerate(self.i_chain):
+                    q_min, q_max = self.chain_limits[k]
+                    q_cmd[idx] = float(np.clip(q_d[k], q_min, q_max))
+
+                msg = Float64MultiArray()
+                msg.data = q_cmd.tolist()
+                self.pub_cmd.publish(msg)
+                
             else:
                 self.state = "IDLE"
                 self.get_logger().info("Returning to idle!")
                 self.t = 0.0
                 return
-            self.ik(pd, vd, Rd, wd)
-
 
     def newton_raphson(self, p_target, R_target, q_guess, max_iter=10, tol=1e-6):
         """
         Calculates joint angles (q) for a given target position (p) and rotation (R).
+        Ignores Z-rotation (last row).
         """
-        # q = np.array(q_guess) # Start from a guess (e.g., current position)
         q = q_guess
         for i in range(20): # Try 20 iterations
             # 1. Calculate where we are now
@@ -294,17 +315,27 @@ class SwingNode(Node):
             
             # 2. Calculate error
             err_p = p_target - p_curr
-            err_R = eR(R_target, R_curr) # Orientation error
+            err_R = eR(R_target, R_curr) # Orientation error 3x1
             
-            error = np.concatenate((err_p, err_R))
+            error_full = np.concatenate((err_p, err_R))
+            
+            # Reduce to 5x1 -> remove last element (z-rot error which corresponds to index 5)
+            # err_R is [rx, ry, rz]
+            # error_full is [px, py, pz, rx, ry, rz]
+            # We want [px, py, pz, rx, ry]
+            error = error_full[:5]
             
             # 3. Check if we are close enough
             if np.linalg.norm(error) < 1e-4:
                 return q
                 
             # 4. Calculate step using Jacobian
-            J = np.vstack((Jv, Jw))
-            damp = 1e-3 * np.eye(6) # Damping to prevent instability
+            J_full = np.vstack((Jv, Jw))
+            
+            # Reduce J to 5xN
+            J = J_full[:5, :]
+            
+            damp = 1e-3 * np.eye(5) # Damping 5x5
             
             # dq = J_pinv * error
             dq = J.T @ np.linalg.inv(J @ J.T + damp) @ error
@@ -313,14 +344,14 @@ class SwingNode(Node):
             q += dq
 
             # 6. Wrap to stay close to guess (prevent spinning)
-            # This ensures we pick the solution closest to our start configuration
             q = q_guess + (q - q_guess + np.pi) % (2 * np.pi) - np.pi
             
             # 7. Clamp to limits
             for j in range(len(q)):
                 q[j] = np.clip(q[j], self.chain_limits[j][0], self.chain_limits[j][1])
             
-        return q # Return best effort after 20 tries
+        return q 
+
     def ik(self, pd, vd, Rd, wd):
         # Extract current chain configuration
         q_chain = np.array([self.qc[i] for i in self.i_chain])
@@ -334,33 +365,43 @@ class SwingNode(Node):
         vr = vd + self.lam * err_p
         wr = wd + self.lam * err_R
 
-        x_dot_ref = np.concatenate((vr, wr))
-        J = np.vstack((Jv, Jw))
+        x_dot_ref_full = np.concatenate((vr, wr)) # 6x1
+        
+        # Reduce to 5x1
+        x_dot_ref = x_dot_ref_full[:5]
+        
+        J_full = np.vstack((Jv, Jw))
+        # Reduce to 5xN
+        J = J_full[:5, :]
 
-        damp = (self.gamma**2) * np.eye(6)
+        damp = (self.gamma**2) * np.eye(5)
+        # Solve for qdot
         qdot_chain = J.T @ np.linalg.inv(J @ J.T + damp) @ x_dot_ref
 
         # change joint command
         # Map chain velocities back to full joint vector
         for k, idx in enumerate(self.i_chain):
-            self.qc[idx] += qdot_chain[k] * self.dt
-            
+            # integrate
+            q_next = self.qc[idx] + qdot_chain[k] * self.dt
 
+            # apply per-joint limits for the chain
+            q_min, q_max = self.chain_limits[k]
+            self.qc[idx] = float(np.clip(q_next, q_min, q_max))
 
-        # Clamp elbow joint
+        # Clamp elbow joint (Index 25)
         self.qc[25] = np.clip(self.qc[25], -np.pi/2, np.pi/2)    
         
-        # Clamp right shoulder pitch
+        # Clamp right shoulder pitch (Index 23)
         self.qc[23] = np.clip(self.qc[23], -np.pi, 0)
 
-        # Clamp hip joints
-        # Roll (X) - Index 26
-        self.qc[13] = np.clip(self.qc[13], -np.pi/6, np.pi/6)
-        # Pitch (Y) - Index 27
-        self.qc[14] = np.clip(self.qc[14], -np.pi/6, np.pi/6)
-        # Yaw (Z) - Index 28
-        self.qc[12] = np.clip(self.qc[12], -2*np.pi, 2*np.pi)
-            
+        # Clamp wrist joints
+        # Roll - Index 26
+        self.qc[26] = np.clip(self.qc[26], -1.97, 1.97)
+        # Pitch - Index 27
+        self.qc[27] = np.clip(self.qc[27], -1.04, 1.04)
+        # Yaw - Index 28
+        self.qc[28] = np.clip(self.qc[28], -np.pi/3, np.pi/3)
+        
         # Publish command
         msg = Float64MultiArray()
         msg.data = self.qc.tolist()
