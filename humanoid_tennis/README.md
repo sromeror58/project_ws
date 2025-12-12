@@ -11,6 +11,7 @@ Then, source the setup file:
 ```bash
 source install/setup.bash
 ```
+Note you might need to source from ~/robotws/install/setup.bash
 
 To launch the simulation:
 ```bash
